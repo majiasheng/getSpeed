@@ -13,6 +13,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     
     private SensorManager sensorManager;
     private Sensor accelerometer;
+//    private final int SAMPLING_PEROID = 1000;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,13 +24,51 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void initSensorManager() {
+
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+
+        // register sensor
+        sensorManager.registerListener(
+                this,
+                sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                SensorManager.SENSOR_DELAY_NORMAL
+        );
+
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        // deregister sensor
+        sensorManager.unregisterListener(this);
+
+    }
+
+    @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-    // Called when there is a new sensor event.
+
+        if (sensorEvent.sensor.getType() != Sensor.TYPE_ACCELEROMETER) return;
+
+        handleAccelerometerEvent(sensorEvent);
+    }
+
+    private void handleAccelerometerEvent(SensorEvent sensorEvent) {
+
+        float[] values = sensorEvent.values;
+        float x = values[0];
+        float y = values[1];
+        float z = values[2];
+
+        //TODO: handle this event
+
+
     }
 
     @Override
