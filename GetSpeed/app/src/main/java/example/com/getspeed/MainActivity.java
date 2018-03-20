@@ -68,6 +68,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         //TODO: handle this event
 
+        // "activity_lable" is the id of text field for displaying walking/running/free falling..
+        //TODO: change "activity" in strings.xml
 
     }
 
