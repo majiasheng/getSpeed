@@ -32,6 +32,8 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import java.util.List;
+
 /**
  * Reference [https://developers.google.com/maps/documentation/android-api/current-place-tutorial]
  */
@@ -48,6 +50,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng origin;
     private LatLng destination;
     private LatLng currentPosition;
+
+    private Polyline trail;
 
     private LocationCallback mLocationCallback;
 
@@ -106,11 +110,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             requestPermission();
         }
 
-
-        Polyline line = mMap.addPolyline(new PolylineOptions()
-                .add(new LatLng(51.5, -0.1), new LatLng(40.7, -74.0), new LatLng(41.889, -87.622))
-                .width(5)
-                .color(Color.RED));
         /**
          * User toggles "Start Tracking"
          *
@@ -152,6 +151,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    //TODO: rename this to be more meaningful
     private void preprocessing() {
         if (mMap == null) {
             return;
@@ -185,8 +185,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         tracking_switch.setText("Stop");
 
         preprocessing();
+
         updateCurrentPosition();
+        //FIXME: this may not work because of the currentPosition is updated in an event listener
         origin = currentPosition;
+
+        trail = mMap.addPolyline(new PolylineOptions()
+                .add(origin)
+                .width(5)
+                .color(Color.RED));
         markPosition(origin);
     }
 
@@ -232,6 +239,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     //TODO: polyline?
                     currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
                     latLng_text.setText("Lat: "+currentPosition.latitude + ", Long:" + currentPosition.longitude);
+                    List<LatLng> pts = trail.getPoints();
+                    pts.add(currentPosition);
+                    trail.setPoints(pts);
                 }
             };
         };
@@ -252,14 +262,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //TODO:
         // remove markers
         // mMap.
-        // clear polyline?
-    }
 
-//    @Override
-//    protected void onResume() {
-//        super.onResume();
-//        startTracking();
-//    }
+        // clear polyline?
+        trail.remove();
+    }
 
     protected LocationRequest createLocationRequest() {
         LocationRequest mLocationRequest = new LocationRequest();
