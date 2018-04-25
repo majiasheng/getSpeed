@@ -26,6 +26,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -49,6 +50,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private LatLng origin;
     private LatLng destination;
+    private Marker originMarker;
+    private Marker dstMarker;
     private LatLng currentPosition;
 
     private Polyline trail;
@@ -194,7 +197,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .add(origin)
                 .width(5)
                 .color(Color.RED));
-        markPosition(origin);
+
+        originMarker = markPosition(origin);
     }
 
     //TODO:
@@ -243,13 +247,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     pts.add(currentPosition);
                     trail.setPoints(pts);
                 }
-            };
+            }
         };
 
     }
 
-    private void markPosition(LatLng pos) {
-        mMap.addMarker(new MarkerOptions()
+    private Marker markPosition(LatLng pos) {
+        return mMap.addMarker(new MarkerOptions()
                 .title("Origin")
                 .snippet("You started from here ;) ")
                 .position(pos));
@@ -261,6 +265,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void reset() {
         //TODO:
         // remove markers
+        originMarker.remove();
         // mMap.
 
         // clear polyline?
