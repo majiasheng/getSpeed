@@ -21,6 +21,14 @@
         android:contentDescription="Start/Stop Tracking"
         android:text="Start"
         />
+
+    <TextView
+        android:id="@+id/latLng"
+        android:layout_width="170dp"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/tracking_switch"
+        android:layout_centerHorizontal="true"
+        android:text="@string/latLng_text" />
     <!--android:text="@string/switch_text"-->
 
 </RelativeLayout>

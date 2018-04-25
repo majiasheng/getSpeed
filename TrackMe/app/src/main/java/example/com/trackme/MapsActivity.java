@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -13,8 +12,12 @@ import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.GeoDataClient;
 import com.google.android.gms.location.places.PlaceDetectionClient;
@@ -22,7 +25,6 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
@@ -33,7 +35,7 @@ import com.google.android.gms.tasks.Task;
 /**
  * Reference [https://developers.google.com/maps/documentation/android-api/current-place-tutorial]
  */
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private boolean mLocationPermissionGranted;
@@ -41,10 +43,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean started;
 
     private Button tracking_switch;
+    private TextView latLng_text;
 
     private LatLng origin;
     private LatLng destination;
     private LatLng currentPosition;
+
+    private LocationCallback mLocationCallback;
 
     //TODO: use time instead?
     private float lastUpdatedTime;
@@ -78,8 +83,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
         init();
     }
 
@@ -94,12 +97,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         requestPermission();
 
-        if (mLocationPermissionGranted) {
-            System.out.println("b4\n\n");
-            updateCurrentPosition();
-            System.out.println("af\n\n");
-
+        try {
+            if (mLocationPermissionGranted) {
+                mMap.setMyLocationEnabled(true);
+                updateCurrentPosition();
+            }
+        } catch (SecurityException e) {
+            requestPermission();
         }
+
 
         Polyline line = mMap.addPolyline(new PolylineOptions()
                 .add(new LatLng(51.5, -0.1), new LatLng(40.7, -74.0), new LatLng(41.889, -87.622))
@@ -114,6 +120,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
          * (do a time check)
          */
 
+    }
+
+    private void requestPermission() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            mLocationPermissionGranted = false;
+            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        } else {
+            mLocationPermissionGranted = true;
+        }
     }
 
     @Override
@@ -134,67 +150,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
 
-        updateLocationUI();
-
     }
 
-    private void init() {
-        // zoom to current location
-
-
-        // global flag for the tracking state, default false
-        started = false;
-
-        // register button onclick listener
-        tracking_switch = (Button) findViewById(R.id.tracking_switch);
-        tracking_switch.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                // TODO:
-                if (started) {
-                    started = false;
-                    // set button text to "Start" (in green)
-                    tracking_switch.setText("Start");
-                    // save trail
-
-                    reset();
-                } else {
-                    started = true;
-                    // set button text to "Stop" (in red)
-                    tracking_switch.setText("Stop");
-
-                    // get current position, then set origin to current position
-
-                    // add origin to
-                }
-            }
-        });
-
-//        locationManager = (LocationManager) getSystemService(this.LOCATION_SERVICE);
-
-    }
-
-    private void requestPermission() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            mLocationPermissionGranted = false;
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-        } else {
-            mLocationPermissionGranted = true;
-        }
-    }
-
-
-    private void updateLocationUI() {
+    private void preprocessing() {
         if (mMap == null) {
             return;
         }
         try {
             if (mLocationPermissionGranted) {
                 mMap.setMyLocationEnabled(true);
-//                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 3000, 3, this);
                 mMap.getUiSettings().setMyLocationButtonEnabled(true);
+
+                // request location updates
+                mFusedLocationProviderClient.requestLocationUpdates(
+                        createLocationRequest(),
+                        mLocationCallback,
+                        null /* Looper */);
             } else {
                 mMap.setMyLocationEnabled(false);
                 mMap.getUiSettings().setMyLocationButtonEnabled(false);
@@ -206,16 +177,108 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    private void startTracking() {
 
+        started = true;
+
+        // set button text to "Stop" (in red)
+        tracking_switch.setText("Stop");
+
+        preprocessing();
+        updateCurrentPosition();
+        origin = currentPosition;
+        markPosition(origin);
+    }
+
+    //TODO:
+    private void stopTracking() {
+        started = false;
+        // set button text to "Start" (in green)
+        tracking_switch.setText("Start");
+        // save trail
+
+        reset();
+
+    }
+
+    private void init() {
+        // initialize global fields
+        started = false; // global flag for the tracking state, default false
+        tracking_switch = (Button) findViewById(R.id.tracking_switch);
+        latLng_text = (TextView) findViewById(R.id.latLng);
+        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
+        // register button onclick listener
+        tracking_switch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (started) {
+                    stopTracking();
+                } else {
+                    startTracking();
+                }
+            }
+        });
+
+        // define location update call back
+        mLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+                    return;
+                }
+                for (Location location : locationResult.getLocations()) {
+                    // Update UI with location data
+                    //TODO: polyline?
+                    currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
+                    latLng_text.setText("Lat: "+currentPosition.latitude + ", Long:" + currentPosition.longitude);
+                }
+            };
+        };
+
+    }
+
+    private void markPosition(LatLng pos) {
+        mMap.addMarker(new MarkerOptions()
+                .title("Origin")
+                .snippet("You started from here ;) ")
+                .position(pos));
+    }
 
     /**
      * Resets global parameters and map when a tracking session stops.
      */
     private void reset() {
         //TODO:
+        // remove markers
+        // mMap.
         // clear polyline?
     }
 
+//    @Override
+//    protected void onResume() {
+//        super.onResume();
+//        startTracking();
+//    }
+
+    protected LocationRequest createLocationRequest() {
+        LocationRequest mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(5000);
+        mLocationRequest.setFastestInterval(3000);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        return mLocationRequest;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
+
+    }
+
+    /**
+     * Updates and goes to current position.
+     */
     public void updateCurrentPosition() {
 
         /*
@@ -236,13 +299,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     mLastKnownLocation.getLongitude()
                             );
 
-                            System.out.println("middle");
-
+                            // go to current position
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, DEFAULT_ZOOM));
-
                         } else {
                             // do nothing
-                            // mMap.getUiSettings().setMyLocationButtonEnabled(false);
                         }
                     }
                 });
@@ -252,26 +312,4 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    @Override
-    public void onLocationChanged(Location location) {
-        currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, DEFAULT_ZOOM));
-        locationManager.removeUpdates(this);
-        System.out.println(currentPosition.toString());
-    }
-
-    @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String s) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String s) {
-
-    }
 }
