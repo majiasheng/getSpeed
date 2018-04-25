@@ -6,10 +6,16 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.widget.TextView;
+
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private static final String TAG = "MainActivity";
+    private TextView accelerationTextView;
+    private TextView speedTextView;
+    private TextView activityTextView;
     
     private SensorManager sensorManager;
     private Sensor accelerometer;
@@ -20,12 +26,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initSensorManager();
+        init();
     }
 
-    private void initSensorManager() {
+    private void init() {
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        accelerationTextView = (TextView)findViewById(R.id.acceleration);
+        speedTextView = (TextView)findViewById(R.id.speed);
+        activityTextView = (TextView)findViewById(R.id.activity);
 
     }
 
@@ -66,7 +75,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         float y = values[1];
         float z = values[2];
 
+        System.out.println("values: " + Arrays.toString(values));
+//        Log.d()
+
         //TODO: handle this event
+        accelerationTextView.setText("x: " + x + "\ny: " + y + "\nz: " + z);
 
         // "activity_lable" is the id of text field for displaying walking/running/free falling..
         //TODO: change "activity" in strings.xml
