@@ -1,14 +1,8 @@
 package example.com.trackme;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.location.Location;
-import android.location.LocationManager;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v4.app.FragmentActivity;
 import android.view.View;
 import android.widget.Button;
 
@@ -25,12 +19,11 @@ import com.google.android.gms.maps.model.PolylineOptions;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
-    private LocationManager locationManager;
+//    private LocationManager locationManager;
     private boolean started;
 
     private Button tracking_switch;
 
-    Location currentLocation;
     private LatLng origin;
     private LatLng destination;
     private LatLng currentPosition;
@@ -59,50 +52,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
         mMap = googleMap;
-
-//        mMap.setMyLocationEnabled(true);
-//        currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-//        currentPosition = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
-//        System.out.println(currentPosition);
-//        mMap.addMarker(new MarkerOptions().position(currentPosition).title("You started from here :)"));
-//        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition));
 
         LatLng mapCenter = new LatLng(41.889, -87.622);
 
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mapCenter, 13));
-//
-//        // Flat markers will rotate when the map is rotated,
-//        // and change perspective when the map is tilted.
-//        mMap.addMarker(new MarkerOptions()
-//                .position(mapCenter)
-//                .flat(true)
-//                .rotation(245));
-//
-//        CameraPosition cameraPosition = CameraPosition.builder()
-//                .target(mapCenter)
-//                .zoom(13)
-//                .bearing(90)
-//                .build();
-//
-//        // Animate the change in camera view over 2 seconds
-//        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition),
-//                2000, null);
-//
-//        Polyline line = mMap.addPolyline(new PolylineOptions()
-//                .add(new LatLng(51.5, -0.1), new LatLng(40.7, -74.0), new LatLng(41.889, -87.622))
-//                .width(5)
-//                .color(Color.RED));
+        // Flat markers will rotate when the map is rotated,
+        // and change perspective when the map is tilted.
+        mMap.addMarker(new MarkerOptions()
+                .position(mapCenter)
+                .flat(true)
+                .rotation(245));
+
+        CameraPosition cameraPosition = CameraPosition.builder()
+                .target(mapCenter)
+                .zoom(13)
+                .bearing(90)
+                .build();
+
+        // Animate the change in camera view over 2 seconds
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition),
+                2000, null);
+
+        Polyline line = mMap.addPolyline(new PolylineOptions()
+                .add(new LatLng(51.5, -0.1), new LatLng(40.7, -74.0), new LatLng(41.889, -87.622))
+                .width(5)
+                .color(Color.RED));
         /**
          * User toggles "Start Tracking"
          *
@@ -121,8 +96,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // global flag for the tracking state, default false
         started = false;
 
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-
         // register button onclick listener
         tracking_switch = (Button) findViewById(R.id.tracking_switch);
         tracking_switch.setOnClickListener(new View.OnClickListener() {
@@ -133,15 +106,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (started) {
                     started = false;
                     // set button text to "Start" (in green)
-                    tracking_switch.setText("Stop");
+                    tracking_switch.setText("Start");
                     // save trail
+
                     reset();
                 } else {
                     started = true;
-                    origin = currentPosition;
-                    tracking_switch.setText("Start");
                     // set button text to "Stop" (in red)
+                    tracking_switch.setText("Stop");
+
                     // get current position, then set origin to current position
+
                     // add origin to
                 }
             }
