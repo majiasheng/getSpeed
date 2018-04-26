@@ -1,6 +1,7 @@
 package example.com.trackme;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -48,6 +49,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private TextView latLng_text;
 
     private boolean started;
+    private boolean ended;
     private LatLng origin;
     private LatLng destination;
     private Marker originMarker;
@@ -131,7 +133,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    //TODO: rename this to be more meaningful
+    /**
+     * Refreshes map settings every time before tracking session starts.
+     * Checks permission first, then determine whether enable "current location"
+     * button and location update.
+     */
     private void refresh() {
         if (mMap == null) {
             return;
@@ -149,6 +155,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             } else {
                 mMap.setMyLocationEnabled(false);
                 mMap.getUiSettings().setMyLocationButtonEnabled(false);
+                mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
                 mLastKnownLocation = null;
             }
         } catch (SecurityException e)  {
@@ -160,7 +167,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // set button text to "Stop" (in red)
         tracking_switch.setText(getString(R.string.stop));
         started = true;
-
+        ended = false;
         refresh();
 
         updateToCurrentPosition();
@@ -184,12 +191,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         started = false;
         mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
 
+        ended = true;
         updateToCurrentPosition();
 
         // save to histories
         currentHistory.setDestination(currentPosition);
         currentHistory.setEndTime(new Date(System.currentTimeMillis()));
         saveToHistory(currentHistory);
+
+//        String message = "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
+//                + "Destination: (" + destination.latitude + ", " + destination.longitude + ")";
+//        showDialog(message);
 
         reset();
 
@@ -198,6 +210,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void init() {
         // initialize global fields
         started = false; // global flag for the tracking state, default false
+        ended = false;
         // TODO: arraylist for history is a temporary solution, should use a database
         histories = new ArrayList<>();
         tracking_switch = (Button) findViewById(R.id.tracking_switch);
@@ -249,6 +262,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void reset() {
         originMarker.remove();
         trail.remove();
+        //TODO: remove lat long from screen
     }
 
     private void saveToHistory(History history) {
@@ -288,6 +302,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                             // go to current position
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, DEFAULT_ZOOM));
+
+                            if (started) {
+                                origin = currentPosition;
+                            }
+
+                            if (ended) {
+                                destination = currentPosition;
+                                String message = "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
+                                        + "Destination: (" + destination.latitude + ", " + destination.longitude + ")";
+                                showDialog(message);
+                            }
                         } else {
                             // do nothing
                         }
@@ -297,6 +322,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (SecurityException e)  {
             Log.e("Exception: %s", e.getMessage());
         }
+    }
+
+
+    public void showDialog(String message) {
+        // 1. Instantiate an AlertDialog.Builder with its constructor
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // 2. Chain together various setter methods to set the dialog characteristics
+        builder.setMessage(message)
+                .setTitle(R.string.end_tracking_title);
+
+        // 3. Get the AlertDialog from create()
+        AlertDialog dialog = builder.create();
+        dialog.setMessage(message);
+        dialog.show();
     }
 
 }

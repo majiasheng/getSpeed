@@ -5,5 +5,9 @@
     <string name="start">Start</string>
     <string name="stop">Stop</string>
     <string name="latLng_text">Lat: , Lng:</string>
+    <string name="ok">Ok</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="end_tracking_title">Finishing Tracking</string>
 
 </resources>

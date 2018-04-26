@@ -18,9 +18,9 @@
         android:id="@+id/tracking_switch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@color/place_autocomplete_search_hint"
         android:contentDescription="Start/Stop Tracking"
-        android:text="Start" />
+        android:text="Start"
+        />
 
     <TextView
         android:id="@+id/latLng"
