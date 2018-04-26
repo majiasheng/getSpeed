@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -19,8 +18,6 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.places.GeoDataClient;
-import com.google.android.gms.location.places.PlaceDetectionClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -33,7 +30,11 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+
+import example.com.trackme.model.History;
 
 /**
  * Reference [https://developers.google.com/maps/documentation/android-api/current-place-tutorial]
@@ -43,35 +44,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private boolean mLocationPermissionGranted;
 
-    private boolean started;
-
     private Button tracking_switch;
     private TextView latLng_text;
 
+    private boolean started;
     private LatLng origin;
     private LatLng destination;
     private Marker originMarker;
     private Marker dstMarker;
     private LatLng currentPosition;
-
     private Polyline trail;
 
-    private LocationCallback mLocationCallback;
-
-    //TODO: use time instead?
-    private float lastUpdatedTime;
-    private float currentTime;
-
-    // The entry points to the Places API.
-    private GeoDataClient mGeoDataClient;
-    private PlaceDetectionClient mPlaceDetectionClient;
 
     // The entry point to the Fused Location Provider.
     private FusedLocationProviderClient mFusedLocationProviderClient;
+    private LocationCallback mLocationCallback;
 
-    // A default location (Sydney, Australia) and default zoom to use when location permission is
-    // not granted.
-    private final LatLng mDefaultLocation = new LatLng(-33.8523341, 151.2106085);
     private static final int DEFAULT_ZOOM = 15;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
 
@@ -79,7 +67,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // location retrieved by the Fused Location Provider.
     private Location mLastKnownLocation;
 
-    private LocationManager locationManager;
+    private List<History> histories;
+    private History currentHistory;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,34 +90,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
         requestPermission();
-
         try {
             if (mLocationPermissionGranted) {
                 mMap.setMyLocationEnabled(true);
-                updateCurrentPosition();
+                updateToCurrentPosition();
             }
         } catch (SecurityException e) {
             requestPermission();
         }
-
-        /**
-         * User toggles "Start Tracking"
-         *
-         * Every 2 seconds, request a location update,
-         * then add new location (new LatLng) to polyline
-         *
-         * (do a time check)
-         */
-
     }
 
     private void requestPermission() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             mLocationPermissionGranted = false;
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            ActivityCompat.requestPermissions(this,
+                    new String[] {Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION
+            );
         } else {
             mLocationPermissionGranted = true;
         }
@@ -136,9 +116,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-
         mLocationPermissionGranted = false;
-
         switch (requestCode) {
             case 1: {
                 if (grantResults.length > 0
@@ -151,11 +129,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 System.out.println("Permission denied");
             }
         }
-
     }
 
     //TODO: rename this to be more meaningful
-    private void preprocessing() {
+    private void refresh() {
         if (mMap == null) {
             return;
         }
@@ -173,7 +150,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.setMyLocationEnabled(false);
                 mMap.getUiSettings().setMyLocationButtonEnabled(false);
                 mLastKnownLocation = null;
-
             }
         } catch (SecurityException e)  {
             Log.e("Exception: %s", e.getMessage());
@@ -181,17 +157,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void startTracking() {
-
+        // set button text to "Stop" (in red)
+        tracking_switch.setText(getString(R.string.stop));
         started = true;
 
-        // set button text to "Stop" (in red)
-        tracking_switch.setText("Stop");
+        refresh();
 
-        preprocessing();
-
-        updateCurrentPosition();
+        updateToCurrentPosition();
         //FIXME: this may not work because of the currentPosition is updated in an event listener
         origin = currentPosition;
+
+        currentHistory = new History(new ArrayList<LatLng>(), origin, null, new Date(System.currentTimeMillis()), null);
 
         trail = mMap.addPolyline(new PolylineOptions()
                 .add(origin)
@@ -203,10 +179,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //TODO:
     private void stopTracking() {
-        started = false;
         // set button text to "Start" (in green)
-        tracking_switch.setText("Start");
-        // save trail
+        tracking_switch.setText(getString(R.string.start));
+        started = false;
+        mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
+
+        updateToCurrentPosition();
+
+        // save to histories
+        currentHistory.setDestination(currentPosition);
+        currentHistory.setEndTime(new Date(System.currentTimeMillis()));
+        saveToHistory(currentHistory);
 
         reset();
 
@@ -215,6 +198,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void init() {
         // initialize global fields
         started = false; // global flag for the tracking state, default false
+        // TODO: arraylist for history is a temporary solution, should use a database
+        histories = new ArrayList<>();
         tracking_switch = (Button) findViewById(R.id.tracking_switch);
         latLng_text = (TextView) findViewById(R.id.latLng);
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -239,8 +224,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     return;
                 }
                 for (Location location : locationResult.getLocations()) {
-                    // Update UI with location data
-                    //TODO: polyline?
+                    // draw trail
                     currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
                     latLng_text.setText("Lat: "+currentPosition.latitude + ", Long:" + currentPosition.longitude);
                     List<LatLng> pts = trail.getPoints();
@@ -263,13 +247,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * Resets global parameters and map when a tracking session stops.
      */
     private void reset() {
-        //TODO:
-        // remove markers
         originMarker.remove();
-        // mMap.
-
-        // clear polyline?
         trail.remove();
+    }
+
+    private void saveToHistory(History history) {
+        histories.add(history);
     }
 
     protected LocationRequest createLocationRequest() {
@@ -280,17 +263,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return mLocationRequest;
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
-
-    }
-
     /**
      * Updates and goes to current position.
      */
-    public void updateCurrentPosition() {
+    public void updateToCurrentPosition() {
 
         /*
          * Get the best and most recent location of the device, which may be null in rare

@@ -2,5 +2,8 @@
     <string name="app_name">TrackMe</string>
     <string name="title_activity_maps">Map</string>
     <string name="switch_text">Start</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
     <string name="latLng_text">Lat: , Lng:</string>
+
 </resources>
