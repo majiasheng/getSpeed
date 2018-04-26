@@ -9,10 +9,12 @@ import android.os.Bundle;
 import example.com.trackme.R;
 
 public class TrackFinishDialog extends DialogFragment {
+
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-        builder.setMessage("")
+        builder.setMessage(getArguments().getString("msg_key"))
+                .setTitle(R.string.end_tracking_title)
                 .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         System.out.println("clicked yes");

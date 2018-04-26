@@ -36,6 +36,7 @@ import java.util.Date;
 import java.util.List;
 
 import example.com.trackme.model.History;
+import example.com.trackme.model.TrackFinishDialog;
 
 /**
  * Reference [https://developers.google.com/maps/documentation/android-api/current-place-tutorial]
@@ -326,17 +327,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void showDialog(String message) {
-        // 1. Instantiate an AlertDialog.Builder with its constructor
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
-        // 2. Chain together various setter methods to set the dialog characteristics
-        builder.setMessage(message)
-                .setTitle(R.string.end_tracking_title);
-
-        // 3. Get the AlertDialog from create()
-        AlertDialog dialog = builder.create();
-        dialog.setMessage(message);
-        dialog.show();
+        TrackFinishDialog dialog = new TrackFinishDialog();
+        Bundle bundle = new Bundle();
+        bundle.putString("msg_key", message);
+        dialog.setArguments(bundle);
+        dialog.show(getFragmentManager(), "finish_tracking");
     }
 
 }
