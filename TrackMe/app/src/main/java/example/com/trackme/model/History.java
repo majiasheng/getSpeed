@@ -23,10 +23,10 @@ public class History {
     private LatLng destination;
 
     @ColumnInfo(name = "startTime")
-    private Date startTime;
+    private long startTime;
 
     @ColumnInfo(name = "endTime")
-    private Date endTime;
+    private long endTime;
 
     public History() {
         trail = new ArrayList<>();
@@ -43,8 +43,8 @@ public class History {
     public History(List<LatLng> trail,
                    @NonNull LatLng origin,
                    LatLng destination,
-                   @NonNull Date startTime,
-                   Date endTime) {
+                   @NonNull long startTime,
+                   long endTime) {
         this.trail = trail;
         this.origin = origin;
         this.destination = destination;
@@ -81,19 +81,19 @@ public class History {
         this.destination = destination;
     }
 
-    public Date getStartTime() {
+    public long getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(Date startTime) {
+    public void setStartTime(long startTime) {
         this.startTime = startTime;
     }
 
-    public Date getEndTime() {
+    public long getEndTime() {
         return endTime;
     }
 
-    public void setEndTime(Date endTime) {
+    public void setEndTime(long endTime) {
         this.endTime = endTime;
     }
 }

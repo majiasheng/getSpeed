@@ -1,5 +1,7 @@
 package example.com.trackme;
 
+import com.google.android.gms.maps.model.Polyline;
+
 import java.util.List;
 
 import example.com.trackme.model.History;

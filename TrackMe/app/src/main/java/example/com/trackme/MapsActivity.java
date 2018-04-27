@@ -57,6 +57,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Marker dstMarker;
     private LatLng currentPosition;
     private Polyline trail;
+    private List<Polyline> predictions;
+
+    // predictions related
+    private List<Marker> predictionDstMarkers;
+    private Polyline predictedTrail;
+
+    private Marker predictionDstMarker;
 
 
     // The entry point to the Fused Location Provider.
@@ -172,6 +179,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         refresh();
         updateToCurrentPosition(true);
 
+    }
+
+    public History getPrediction(List<History> histories) {
+        if (histories == null || histories.size() < 1) {
+            return null;
+        } else {
+            //TODO: the meat of the project is here
+
+            //NOTE: use this for testing
+            return histories.get(0);
+        }
 
     }
 
@@ -184,7 +202,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         started = false;
         ended = true;
         updateToCurrentPosition(false);
-
     }
 
     private void init() {
@@ -193,6 +210,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         ended = false;
         // TODO: arraylist for history is a temporary solution, should use a database
         histories = new ArrayList<>();
+        predictions = new ArrayList<>();
         tracking_switch = (Button) findViewById(R.id.tracking_switch);
         latLng_text = (TextView) findViewById(R.id.latLng);
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -255,7 +273,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     protected LocationRequest createLocationRequest() {
         LocationRequest mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(5000);
+        mLocationRequest.setInterval(3000);
         mLocationRequest.setFastestInterval(3000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         return mLocationRequest;
@@ -290,12 +308,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             // do this only when tracking session is newly started
                             if (newlyStarted) {
                                 origin = currentPosition;
-                                currentHistory = new History(new ArrayList<LatLng>(), origin, null, new Date(System.currentTimeMillis()), null);
+                                currentHistory = new History(new ArrayList<LatLng>(), origin, null, System.currentTimeMillis(), -1);
                                 trail = mMap.addPolyline(new PolylineOptions()
                                         .add(origin)
                                         .width(5)
                                         .color(Color.RED));
                                 originMarker = markPosition(origin);
+
+                                //TODO: just for testing
+                                History prediction = getPrediction(histories);
+                                if (prediction != null) {
+                                    // mark dst
+                                    predictionDstMarker = markPosition(prediction.getDestination());
+                                    // draw trajectory
+                                    predictedTrail = mMap.addPolyline(new PolylineOptions()
+                                            .width(5)
+                                            .color(Color.GRAY));
+                                }
+
                             }
 
                             // do this only when tracking session ended
@@ -303,7 +333,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 destination = currentPosition;
                                 // save to histories
                                 currentHistory.setDestination(destination);
-                                currentHistory.setEndTime(new Date(System.currentTimeMillis()));
+                                currentHistory.setEndTime(System.currentTimeMillis());
                                 saveToHistory(currentHistory);
                                 // this may not be necessary since the dialog box will cover it
                                 dstMarker = markPosition(destination);
