@@ -1,5 +1,8 @@
 package example.com.trackme.model;
 
+import android.arch.persistence.room.ColumnInfo;
+import android.arch.persistence.room.Entity;
+import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.NonNull;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -8,11 +11,21 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+@Entity
 public class History {
+    @PrimaryKey(autoGenerate = true)
+    private int id;
+
     private List<LatLng> trail;
+
     private LatLng origin;
+
     private LatLng destination;
+
+    @ColumnInfo(name = "startTime")
     private Date startTime;
+
+    @ColumnInfo(name = "endTime")
     private Date endTime;
 
     public History() {
