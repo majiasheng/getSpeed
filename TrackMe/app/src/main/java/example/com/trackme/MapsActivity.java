@@ -97,7 +97,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         try {
             if (mLocationPermissionGranted) {
                 mMap.setMyLocationEnabled(true);
-                updateToCurrentPosition();
+                updateToCurrentPosition(false);
             }
         } catch (SecurityException e) {
             requestPermission();
@@ -170,41 +170,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         started = true;
         ended = false;
         refresh();
+        updateToCurrentPosition(true);
 
-        updateToCurrentPosition();
-        //FIXME: this may not work because of the currentPosition is updated in an event listener
-        origin = currentPosition;
 
-        currentHistory = new History(new ArrayList<LatLng>(), origin, null, new Date(System.currentTimeMillis()), null);
-
-        trail = mMap.addPolyline(new PolylineOptions()
-                .add(origin)
-                .width(5)
-                .color(Color.RED));
-
-        originMarker = markPosition(origin);
     }
 
     //TODO:
     private void stopTracking() {
         // set button text to "Start" (in green)
         tracking_switch.setText(getString(R.string.start));
-        started = false;
         mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
 
+        started = false;
         ended = true;
-        updateToCurrentPosition();
-
-        // save to histories
-        currentHistory.setDestination(currentPosition);
-        currentHistory.setEndTime(new Date(System.currentTimeMillis()));
-        saveToHistory(currentHistory);
-
-//        String message = "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
-//                + "Destination: (" + destination.latitude + ", " + destination.longitude + ")";
-//        showDialog(message);
-
-        reset();
+        updateToCurrentPosition(false);
 
     }
 
@@ -261,8 +240,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * Resets global parameters and map when a tracking session stops.
      */
     private void reset() {
-        originMarker.remove();
-        trail.remove();
+        if (originMarker != null)
+            originMarker.remove();
+        if (dstMarker != null)
+            dstMarker.remove();
+        if (trail != null)
+            trail.remove();
         //TODO: remove lat long from screen
     }
 
@@ -281,7 +264,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     /**
      * Updates and goes to current position.
      */
-    public void updateToCurrentPosition() {
+    public void updateToCurrentPosition(final boolean newlyStarted) {
 
         /*
          * Get the best and most recent location of the device, which may be null in rare
@@ -301,18 +284,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     mLastKnownLocation.getLongitude()
                             );
 
-                            // go to current position
+                            // zoom to current position
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, DEFAULT_ZOOM));
 
-                            if (started) {
+                            // do this only when tracking session is newly started
+                            if (newlyStarted) {
                                 origin = currentPosition;
+                                currentHistory = new History(new ArrayList<LatLng>(), origin, null, new Date(System.currentTimeMillis()), null);
+                                trail = mMap.addPolyline(new PolylineOptions()
+                                        .add(origin)
+                                        .width(5)
+                                        .color(Color.RED));
+                                originMarker = markPosition(origin);
                             }
 
+                            // do this only when tracking session ended
                             if (ended) {
                                 destination = currentPosition;
+                                // save to histories
+                                currentHistory.setDestination(destination);
+                                currentHistory.setEndTime(new Date(System.currentTimeMillis()));
+                                saveToHistory(currentHistory);
+                                // this may not be necessary since the dialog box will cover it
+                                dstMarker = markPosition(destination);
+                                //TODO: get lat long's location name
                                 String message = "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
                                         + "Destination: (" + destination.latitude + ", " + destination.longitude + ")";
                                 showDialog(message);
+                                reset();
                             }
                         } else {
                             // do nothing
@@ -325,11 +324,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    //TODO: override onResume and onPause
 
-    public void showDialog(String message) {
+
+    public void showDialog(String message/*, Marker marker*/) {
         TrackFinishDialog dialog = new TrackFinishDialog();
         Bundle bundle = new Bundle();
         bundle.putString("msg_key", message);
+        //TODO: put marker into bundle so that it can be removed afterwards
         dialog.setArguments(bundle);
         dialog.show(getFragmentManager(), "finish_tracking");
     }
