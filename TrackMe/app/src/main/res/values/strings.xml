@@ -9,5 +9,7 @@
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="end_tracking_title">Finished tracking... save to history?</string>
+    <string name="msg_key">msg_key</string>
+    <string name="history_key">history_key</string>
 
 </resources>

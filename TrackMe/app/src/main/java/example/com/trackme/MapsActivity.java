@@ -24,6 +24,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -39,6 +40,7 @@ import java.util.concurrent.Executors;
 import example.com.trackme.model.History;
 import example.com.trackme.model.TrackFinishDialog;
 import example.com.trackme.persistence.TrackMeDatabase;
+import example.com.trackme.util.HistoryConverter;
 
 /**
  * Reference [https://developers.google.com/maps/documentation/android-api/current-place-tutorial]
@@ -84,6 +86,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // db
     private TrackMeDatabase db;
+
+    private TrackFinishDialog dialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -200,7 +204,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     History prediction = histories.get(0);
 
                     if (prediction != null) {
-                        System.out.println(prediction.toString());
+                        System.out.println("prediction: "+prediction.toString());
                         // mark dst
                         predictionDstMarker = markPosition(prediction.getDestination(), "Predicted Destination", "You want to come here?");
                         // draw trajectory
@@ -239,6 +243,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         tracking_switch = (Button) findViewById(R.id.tracking_switch);
         latLng_text = (TextView) findViewById(R.id.latLng);
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
+        dialog = new TrackFinishDialog();
 
         // register button onclick listener
         tracking_switch.setOnClickListener(new View.OnClickListener() {
@@ -285,7 +291,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return mMap.addMarker(new MarkerOptions()
                 .title(title)
                 .snippet(snippet)
-                .position(pos));
+                .position(pos)
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
     }
 
     /**
@@ -371,13 +378,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 // save to histories
                                 currentHistory.setDestination(destination);
                                 currentHistory.setEndTime(System.currentTimeMillis());
-                                saveToHistory(currentHistory);
+                                //TODO: call this in dialog's handler
+                                 //saveToHistory(currentHistory);
                                 // this may not be necessary since the dialog box will cover it
                                 dstMarker = markPosition(destination, "Destination", "");
                                 //TODO: get lat long's location name
                                 String message = "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
                                         + "Destination: (" + destination.latitude + ", " + destination.longitude + ")";
-                                showDialog(message);
+
+                                showDialog(message, HistoryConverter.historyToString(currentHistory));
                                 reset();
                             }
                         } else {
@@ -394,10 +403,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //TODO: override onResume and onPause
 
 
-    public void showDialog(String message/*, Marker marker*/) {
-        TrackFinishDialog dialog = new TrackFinishDialog();
+
+    //TODO: make dialog into a singleton, and pass the db connection to it
+    public void showDialog(String message, String history/*, Marker marker*/) {
+
         Bundle bundle = new Bundle();
         bundle.putString("msg_key", message);
+        //TODO: add history as argument, and pass history to dialog
+        bundle.putString("history_key", history);
         //TODO: put marker into bundle so that it can be removed afterwards
         dialog.setArguments(bundle);
         dialog.show(getFragmentManager(), "finish_tracking");
