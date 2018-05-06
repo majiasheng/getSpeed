@@ -1,10 +1,11 @@
 package example.com.trackme;
 
 import android.Manifest;
-import android.app.AlertDialog;
+import android.arch.persistence.room.Room;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -32,11 +33,12 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 import example.com.trackme.model.History;
 import example.com.trackme.model.TrackFinishDialog;
+import example.com.trackme.persistence.TrackMeDatabase;
 
 /**
  * Reference [https://developers.google.com/maps/documentation/android-api/current-place-tutorial]
@@ -79,6 +81,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private List<History> histories;
     private History currentHistory;
+
+    // db
+    private TrackMeDatabase db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -181,15 +186,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    public History getPrediction(List<History> histories) {
-        if (histories == null || histories.size() < 1) {
-            return null;
-        } else {
-            //TODO: the meat of the project is here
+    public void predict() {
+//        new AsyncTask<Void, Void, Void>() {
+//            @Override
+//            protected Void doInBackground(Void... voids) {
+                System.out.println("getting prediction...");
+                histories = db.historyDao().getAll();
+                System.out.println("size of history: " + histories.size());
+                if (histories != null && histories.size() > 1) {
 
-            //NOTE: use this for testing
-            return histories.get(0);
-        }
+                    // TODO: do history process to predict
+                    //NOTE: for now, use this for testing
+                    History prediction = histories.get(0);
+
+                    if (prediction != null) {
+                        System.out.println(prediction.toString());
+                        // mark dst
+                        predictionDstMarker = markPosition(prediction.getDestination(), "Predicted Destination", "You want to come here?");
+                        // draw trajectory
+                        predictedTrail = mMap.addPolyline(new PolylineOptions()
+                                .addAll(prediction.getTrail())
+                                .width(5)
+                                .color(Color.GRAY));
+                    }
+                }
+//                return null;
+//            }
+//        }.execute();
 
     }
 
@@ -205,12 +228,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void init() {
+        initDb();
         // initialize global fields
         started = false; // global flag for the tracking state, default false
         ended = false;
         // TODO: arraylist for history is a temporary solution, should use a database
         histories = new ArrayList<>();
         predictions = new ArrayList<>();
+//        trail = new Polyline();
         tracking_switch = (Button) findViewById(R.id.tracking_switch);
         latLng_text = (TextView) findViewById(R.id.latLng);
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -237,20 +262,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 for (Location location : locationResult.getLocations()) {
                     // draw trail
                     currentPosition = new LatLng(location.getLatitude(), location.getLongitude());
-                    latLng_text.setText("Lat: "+currentPosition.latitude + ", Long:" + currentPosition.longitude);
-                    List<LatLng> pts = trail.getPoints();
-                    pts.add(currentPosition);
-                    trail.setPoints(pts);
+                    latLng_text.setText("Lat: " + currentPosition.latitude + ", Long:" + currentPosition.longitude);
+                    if (trail != null) {
+                        List<LatLng> pts = trail.getPoints();
+                        pts.add(currentPosition);
+                        trail.setPoints(pts);
+                    }
                 }
             }
         };
 
     }
 
-    private Marker markPosition(LatLng pos) {
+    private void initDb() {
+        db = Room.databaseBuilder(getApplicationContext(),
+                TrackMeDatabase.class, "trackMe")
+                .allowMainThreadQueries()
+                .build();
+    }
+
+    private Marker markPosition(LatLng pos, String title, String snippet) {
         return mMap.addMarker(new MarkerOptions()
-                .title("Origin")
-                .snippet("You started from here ;) ")
+                .title(title)
+                .snippet(snippet)
                 .position(pos));
     }
 
@@ -264,11 +298,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             dstMarker.remove();
         if (trail != null)
             trail.remove();
+        if (predictedTrail != null)
+            predictedTrail.remove();
+        if (predictionDstMarker != null)
+            predictionDstMarker.remove();
         //TODO: remove lat long from screen
     }
 
-    private void saveToHistory(History history) {
-        histories.add(history);
+    private void saveToHistory(final History history) {
+//        histories.add(history);
+//        Executors.newSingleThreadExecutor().execute(new Runnable() {
+//            @Override
+//            public void run() {
+                db.historyDao().insertAll(history);
+//            }
+//        });
+
     }
 
     protected LocationRequest createLocationRequest() {
@@ -281,6 +326,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     /**
      * Updates and goes to current position.
+     * Called only on tracking session start/end and for the starting up of the app.
      */
     public void updateToCurrentPosition(final boolean newlyStarted) {
 
@@ -313,18 +359,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                         .add(origin)
                                         .width(5)
                                         .color(Color.RED));
-                                originMarker = markPosition(origin);
+                                originMarker = markPosition(origin, "Origin", "You started here :)");
 
-                                //TODO: just for testing
-                                History prediction = getPrediction(histories);
-                                if (prediction != null) {
-                                    // mark dst
-                                    predictionDstMarker = markPosition(prediction.getDestination());
-                                    // draw trajectory
-                                    predictedTrail = mMap.addPolyline(new PolylineOptions()
-                                            .width(5)
-                                            .color(Color.GRAY));
-                                }
+                                predict();
 
                             }
 
@@ -336,7 +373,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 currentHistory.setEndTime(System.currentTimeMillis());
                                 saveToHistory(currentHistory);
                                 // this may not be necessary since the dialog box will cover it
-                                dstMarker = markPosition(destination);
+                                dstMarker = markPosition(destination, "Destination", "");
                                 //TODO: get lat long's location name
                                 String message = "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
                                         + "Destination: (" + destination.latitude + ", " + destination.longitude + ")";

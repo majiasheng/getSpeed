@@ -21,7 +21,7 @@ public interface HistoryDao {
     History findById(int id);
 
     @Insert
-    void insertAll(History... users);
+    void insertAll(History... histories);
 
     @Delete
     void delete(History history);

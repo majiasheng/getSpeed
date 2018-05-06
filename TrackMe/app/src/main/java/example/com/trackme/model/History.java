@@ -3,6 +3,7 @@ package example.com.trackme.model;
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
+import android.arch.persistence.room.TypeConverters;
 import android.support.annotation.NonNull;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -11,15 +12,24 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import example.com.trackme.persistence.LatLngConverter;
+import example.com.trackme.persistence.LatLngListConverter;
+
 @Entity
 public class History {
     @PrimaryKey(autoGenerate = true)
     private int id;
 
+    @TypeConverters({LatLngListConverter.class, LatLngConverter.class})
+    @ColumnInfo(name = "trail")
     private List<LatLng> trail;
 
+    @TypeConverters(LatLngConverter.class)
+    @ColumnInfo(name = "origin")
     private LatLng origin;
 
+    @TypeConverters(LatLngConverter.class)
+    @ColumnInfo(name = "destination")
     private LatLng destination;
 
     @ColumnInfo(name = "startTime")
@@ -50,6 +60,15 @@ public class History {
         this.destination = destination;
         this.startTime = startTime;
         this.endTime = endTime;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+
+        return id;
     }
 
     public List<LatLng> getTrail() {
@@ -95,5 +114,13 @@ public class History {
 
     public void setEndTime(long endTime) {
         this.endTime = endTime;
+    }
+
+    @Override
+    public String toString() {
+        return "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
+                +  "Destination: (" + destination.latitude + ", " + destination.longitude + ")\n"
+                + " Time start: " + new Date(startTime) + "\n"
+                + " Time end: " + new Date(endTime) + "\n";
     }
 }

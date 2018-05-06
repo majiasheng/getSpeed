@@ -8,6 +8,6 @@
     <string name="ok">Ok</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="end_tracking_title">Finishing Tracking</string>
+    <string name="end_tracking_title">Finished tracking... save to history?</string>
 
 </resources>

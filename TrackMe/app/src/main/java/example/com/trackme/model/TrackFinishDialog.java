@@ -18,11 +18,13 @@ public class TrackFinishDialog extends DialogFragment {
                 .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         System.out.println("clicked yes");
+                        //TODO: save trail to history
                     }
                 })
                 .setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         System.out.println("clicked no");
+                        //TODO: do nothing
                     }
                 });
         // Create the AlertDialog object and return it
