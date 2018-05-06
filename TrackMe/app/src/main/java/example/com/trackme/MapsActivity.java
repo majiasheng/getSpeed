@@ -40,6 +40,7 @@ import java.util.concurrent.Executors;
 import example.com.trackme.model.History;
 import example.com.trackme.model.TrackFinishDialog;
 import example.com.trackme.persistence.TrackMeDatabase;
+import example.com.trackme.util.DbConnConverter;
 import example.com.trackme.util.HistoryConverter;
 
 /**
@@ -191,33 +192,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void predict() {
-//        new AsyncTask<Void, Void, Void>() {
-//            @Override
-//            protected Void doInBackground(Void... voids) {
-                System.out.println("getting prediction...");
-                histories = db.historyDao().getAll();
-                System.out.println("size of history: " + histories.size());
-                if (histories != null && histories.size() > 1) {
+        // TODO: for now, retrieve the first result for testing
+        histories = db.historyDao().getAll();
+        System.out.println("Getting prediction...\n" +
+                "Size of history: " + histories.size());
+        if (histories != null && histories.size() > 1) {
 
-                    // TODO: do history process to predict
-                    //NOTE: for now, use this for testing
-                    History prediction = histories.get(0);
+            History prediction = histories.get(0);
 
-                    if (prediction != null) {
-                        System.out.println("prediction: "+prediction.toString());
-                        // mark dst
-                        predictionDstMarker = markPosition(prediction.getDestination(), "Predicted Destination", "You want to come here?");
-                        // draw trajectory
-                        predictedTrail = mMap.addPolyline(new PolylineOptions()
-                                .addAll(prediction.getTrail())
-                                .width(5)
-                                .color(Color.GRAY));
-                    }
-                }
-//                return null;
-//            }
-//        }.execute();
-
+            if (prediction != null) {
+                System.out.println(
+                        "++++++++++++++++++++++++++++++++" +
+                        ">> Prediction: \n"
+                        + prediction.toString()
+                        + "++++++++++++++++++++++++++++++++");
+                // mark dst
+                predictionDstMarker = markPosition(prediction.getDestination(),
+                        "Predicted Destination",
+                        "You want to come here?");
+                predictionDstMarker.setIcon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+                // draw trajectory
+                predictedTrail = mMap.addPolyline(new PolylineOptions()
+                        .addAll(prediction.getTrail())
+                        .width(5)
+                        .color(Color.GRAY));
+            }
+        }
     }
 
     //TODO:
@@ -258,7 +258,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        // define location update call back
+        /** Defines location update call back
+         *  this is where the trail gets drawn
+         */
         mLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
@@ -281,18 +283,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void initDb() {
-        db = Room.databaseBuilder(getApplicationContext(),
-                TrackMeDatabase.class, "trackMe")
-                .allowMainThreadQueries()
-                .build();
+        if (db == null) {
+            db = Room.databaseBuilder(getApplicationContext(),
+                    TrackMeDatabase.class, "trackMe")
+                    .allowMainThreadQueries()
+                    .build();
+        }
     }
 
     private Marker markPosition(LatLng pos, String title, String snippet) {
         return mMap.addMarker(new MarkerOptions()
                 .title(title)
                 .snippet(snippet)
-                .position(pos)
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                .position(pos));
     }
 
     /**
@@ -313,14 +316,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void saveToHistory(final History history) {
-//        histories.add(history);
-//        Executors.newSingleThreadExecutor().execute(new Runnable() {
-//            @Override
-//            public void run() {
-                db.historyDao().insertAll(history);
-//            }
-//        });
-
+        db.historyDao().insertAll(history);
     }
 
     protected LocationRequest createLocationRequest() {
@@ -404,14 +400,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    //TODO: make dialog into a singleton, and pass the db connection to it
+    //TODO: pass the db connection to dialog
     public void showDialog(String message, String history/*, Marker marker*/) {
 
         Bundle bundle = new Bundle();
         bundle.putString("msg_key", message);
-        //TODO: add history as argument, and pass history to dialog
         bundle.putString("history_key", history);
-        //TODO: put marker into bundle so that it can be removed afterwards
         dialog.setArguments(bundle);
         dialog.show(getFragmentManager(), "finish_tracking");
     }
