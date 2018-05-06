@@ -52,6 +52,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean mLocationPermissionGranted;
 
     private Button tracking_switch;
+    private Button delete_btn;
     private TextView latLng_text;
 
     private boolean started;
@@ -241,6 +242,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         predictions = new ArrayList<>();
 //        trail = new Polyline();
         tracking_switch = (Button) findViewById(R.id.tracking_switch);
+        delete_btn = (Button) findViewById(R.id.delete_btn);
         latLng_text = (TextView) findViewById(R.id.latLng);
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -255,6 +257,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 } else {
                     startTracking();
                 }
+            }
+        });
+
+        // register button onclick listener
+        delete_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clearHistory();
             }
         });
 
@@ -398,9 +408,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //TODO: override onResume and onPause
 
-
-
-    //TODO: pass the db connection to dialog
     public void showDialog(String message, String history/*, Marker marker*/) {
 
         Bundle bundle = new Bundle();
@@ -408,6 +415,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         bundle.putString("history_key", history);
         dialog.setArguments(bundle);
         dialog.show(getFragmentManager(), "finish_tracking");
+    }
+
+    public void clearHistory() {
+        db.historyDao().deleteAll();
     }
 
 }
