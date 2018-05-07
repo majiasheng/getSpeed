@@ -192,33 +192,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    public void predict(LatLng origin) {
-        // TODO: for now, retrieve the first result for testing
-        histories = db.historyDao().getAll();
-        System.out.println("Getting prediction...\n" +
-                "Size of history: " + histories.size());
-        if (histories != null && histories.size() > 1) {
+    public void predict(LatLng origin, long currentTime) {
 
-            History prediction = histories.get(0);
+        History prediction = TrackMe.getPrediction(db, origin, currentTime);
 
-            if (prediction != null) {
-                System.out.println(
-                        "++++++++++++++++++++++++++++++++" +
-                        ">> Prediction: \n"
-                        + prediction.toString()
-                        + "++++++++++++++++++++++++++++++++");
-                // mark dst
-                predictionDstMarker = markPosition(prediction.getDestination(),
-                        "Predicted Destination",
-                        "You want to come here?");
-                predictionDstMarker.setIcon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
-                // draw trajectory
-                predictedTrail = mMap.addPolyline(new PolylineOptions()
-                        .addAll(prediction.getTrail())
-                        .width(5)
-                        .color(Color.GRAY));
-            }
+        if (prediction != null) {
+            System.out.println(
+                    "++++++++++++++++++++++++++++++++" +
+                    ">> Prediction: \n"
+                    + prediction.toString()
+                    + "++++++++++++++++++++++++++++++++");
+            // mark dst
+            predictionDstMarker = markPosition(prediction.getDestination(),
+                    "Predicted Destination",
+                    "You want to come here?");
+            predictionDstMarker.setIcon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+            // draw trajectory
+            predictedTrail = mMap.addPolyline(new PolylineOptions()
+                    .addAll(prediction.getTrail())
+                    .width(5)
+                    .color(Color.GRAY));
         }
+
     }
 
     //TODO:
@@ -375,7 +370,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                         .color(Color.RED));
                                 originMarker = markPosition(origin, "Origin", "You started here :)");
 
-                                predict(origin);
+                                 predict(origin, currentTime);
 
                             }
 
