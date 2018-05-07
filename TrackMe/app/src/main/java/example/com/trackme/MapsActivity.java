@@ -192,7 +192,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    public void predict() {
+    public void predict(LatLng origin) {
         // TODO: for now, retrieve the first result for testing
         histories = db.historyDao().getAll();
         System.out.println("Getting prediction...\n" +
@@ -366,15 +366,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                             // do this only when tracking session is newly started
                             if (newlyStarted) {
+                                long currentTime = System.currentTimeMillis();
                                 origin = currentPosition;
-                                currentHistory = new History(new ArrayList<LatLng>(), origin, null, System.currentTimeMillis(), -1);
+                                currentHistory = new History(new ArrayList<LatLng>(), origin, null, currentTime, -1);
                                 trail = mMap.addPolyline(new PolylineOptions()
                                         .add(origin)
                                         .width(5)
                                         .color(Color.RED));
                                 originMarker = markPosition(origin, "Origin", "You started here :)");
 
-                                predict();
+                                predict(origin);
 
                             }
 

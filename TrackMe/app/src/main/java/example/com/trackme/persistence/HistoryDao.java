@@ -7,6 +7,7 @@ import android.arch.persistence.room.Query;
 
 import java.util.List;
 
+import example.com.trackme.TrackMe;
 import example.com.trackme.model.History;
 
 @Dao
@@ -28,4 +29,8 @@ public interface HistoryDao {
 
     @Query("DELETE FROM history")
     void deleteAll();
+
+    //TODO:
+    @Query("SELECT * FROM history WHERE startTime >= :newStartTime-" + TrackMe.T + " AND startTime <= :newStartTime+" + TrackMe.T)
+    List<History> getCandidatePredictions(long newStartTime);
 }
