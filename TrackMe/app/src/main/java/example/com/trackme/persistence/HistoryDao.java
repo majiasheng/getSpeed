@@ -30,7 +30,6 @@ public interface HistoryDao {
     @Query("DELETE FROM history")
     void deleteAll();
 
-    //TODO:
     @Query("SELECT * FROM history WHERE startTime >= :newStartTime-" + TrackMe.T + " AND startTime <= :newStartTime+" + TrackMe.T)
     List<History> getCandidatePredictions(long newStartTime);
 }

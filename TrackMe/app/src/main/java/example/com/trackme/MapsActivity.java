@@ -5,7 +5,6 @@ import android.arch.persistence.room.Room;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -35,12 +34,10 @@ import com.google.android.gms.tasks.Task;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
 
 import example.com.trackme.model.History;
 import example.com.trackme.model.TrackFinishDialog;
 import example.com.trackme.persistence.TrackMeDatabase;
-import example.com.trackme.util.DbConnConverter;
 import example.com.trackme.util.HistoryConverter;
 
 /**
@@ -48,6 +45,7 @@ import example.com.trackme.util.HistoryConverter;
  */
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
+    public static final long UPDATE_INTERVAL = 3000L; // ms
     private GoogleMap mMap;
     private boolean mLocationPermissionGranted;
 
@@ -66,7 +64,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private List<Polyline> predictions;
 
     // predictions related
-    private List<Marker> predictionDstMarkers;
     private Polyline predictedTrail;
 
     private Marker predictionDstMarker;
@@ -83,7 +80,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     // location retrieved by the Fused Location Provider.
     private Location mLastKnownLocation;
 
-    private List<History> histories;
     private History currentHistory;
 
     // db
@@ -192,16 +188,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    /**
+     * Predicts users trail based on origin and time.
+     * @param origin
+     * @param currentTime
+     */
     public void predict(LatLng origin, long currentTime) {
 
         History prediction = TrackMe.getPrediction(db, origin, currentTime);
 
         if (prediction != null) {
             System.out.println(
-                    "++++++++++++++++++++++++++++++++" +
-                    ">> Prediction: \n"
+                    "++++++++++++++++++++++++++++++++\n"
+                    + ">> Prediction: \n"
                     + prediction.toString()
-                    + "++++++++++++++++++++++++++++++++");
+                    + "\n++++++++++++++++++++++++++++++++");
             // mark dst
             predictionDstMarker = markPosition(prediction.getDestination(),
                     "Predicted Destination",
@@ -212,13 +213,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     .addAll(prediction.getTrail())
                     .width(5)
                     .color(Color.GRAY));
+//            predictedTrail = mMap.addPolyline(new PolylineOptions()
+//                    .add(origin)
+//                    .width(5)
+//                    .color(Color.GRAY));
+//            predictedTrail.setPoints(prediction.getTrail());
+            System.out.println("predictedTrail: " + predictedTrail.getPoints().size());
+
         }
 
     }
 
-    //TODO:
     private void stopTracking() {
-        // set button text to "Start" (in green)
+        //TODO: set button text to "Start" (in green)
         tracking_switch.setText(getString(R.string.start));
         mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
 
@@ -232,10 +239,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // initialize global fields
         started = false; // global flag for the tracking state, default false
         ended = false;
-        // TODO: arraylist for history is a temporary solution, should use a database
-        histories = new ArrayList<>();
         predictions = new ArrayList<>();
-//        trail = new Polyline();
         tracking_switch = (Button) findViewById(R.id.tracking_switch);
         delete_btn = (Button) findViewById(R.id.delete_btn);
         latLng_text = (TextView) findViewById(R.id.latLng);
@@ -320,14 +324,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //TODO: remove lat long from screen
     }
 
-    private void saveToHistory(final History history) {
-        db.historyDao().insertAll(history);
-    }
-
     protected LocationRequest createLocationRequest() {
         LocationRequest mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(3000);
-        mLocationRequest.setFastestInterval(3000);
+        mLocationRequest.setInterval(UPDATE_INTERVAL);
+        mLocationRequest.setFastestInterval(UPDATE_INTERVAL);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         return mLocationRequest;
     }
@@ -363,14 +363,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             if (newlyStarted) {
                                 long currentTime = System.currentTimeMillis();
                                 origin = currentPosition;
-                                currentHistory = new History(new ArrayList<LatLng>(), origin, null, currentTime, -1);
+                                currentHistory = new History(null, origin, null, currentTime, -1);
                                 trail = mMap.addPolyline(new PolylineOptions()
                                         .add(origin)
                                         .width(5)
                                         .color(Color.RED));
                                 originMarker = markPosition(origin, "Origin", "You started here :)");
 
-                                 predict(origin, currentTime);
+                                predict(origin, currentTime);
 
                             }
 
@@ -380,14 +380,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 // save to histories
                                 currentHistory.setDestination(destination);
                                 currentHistory.setEndTime(System.currentTimeMillis());
-                                //TODO: call this in dialog's handler
-                                 //saveToHistory(currentHistory);
+                                currentHistory.setTrail(trail.getPoints());
                                 // this may not be necessary since the dialog box will cover it
                                 dstMarker = markPosition(destination, "Destination", "");
                                 //TODO: get lat long's location name
                                 String message = "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
                                         + "Destination: (" + destination.latitude + ", " + destination.longitude + ")";
 
+                                // history will be prompted to save in dialog's handler
                                 showDialog(message, HistoryConverter.historyToString(currentHistory));
                                 reset();
                             }
@@ -404,8 +404,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //TODO: override onResume and onPause
 
+    /**
+     * Shows dialog to notify user that the tracking session is finish.
+     * Prompts user to save trail to history.
+     * @param message
+     * @param history
+     */
     public void showDialog(String message, String history/*, Marker marker*/) {
-
         Bundle bundle = new Bundle();
         bundle.putString("msg_key", message);
         bundle.putString("history_key", history);

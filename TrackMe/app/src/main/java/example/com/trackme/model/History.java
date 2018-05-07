@@ -72,11 +72,11 @@ public class History {
     }
 
     public List<LatLng> getTrail() {
-        this.trail = trail;
         return trail;
     }
 
     public void setTrail(List<LatLng> trail) {
+        this.trail = trail;
     }
 
     public History addPoint(LatLng point) {

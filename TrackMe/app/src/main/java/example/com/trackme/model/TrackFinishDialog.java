@@ -56,7 +56,7 @@ public class TrackFinishDialog extends DialogFragment {
                 .setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         // do nothing
-                        System.out.println("Clicked no. No saving data to history.");
+                        System.out.println("Clicked no. Not saving data to history.");
                     }
                 });
         // Create the AlertDialog object and return it
