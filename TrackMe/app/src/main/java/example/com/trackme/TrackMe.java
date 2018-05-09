@@ -10,11 +10,17 @@ import java.util.List;
 import example.com.trackme.model.History;
 import example.com.trackme.persistence.TrackMeDatabase;
 
+/**
+ * Provides algorithm for getting trajectory prediction.
+ */
 public class TrackMe {
 
     // Define the theoretical deviation range/radius of origin, R,
     // to be 860m away from the actual origin.
-    public static final float R = 860.0f;
+    // public static final float R = 860.0f;
+
+    //The value is for testing in a contained range
+    public static final float R = 100.0f;
 
     // Define the theoretical deviation range of departure time, T,
     // to be 2 hour (7200 * 1000 milliseconds) away from the actual departure time.
@@ -31,6 +37,7 @@ public class TrackMe {
      */
     public static History getPrediction(@NonNull TrackMeDatabase db, @NonNull LatLng newOrigin, @NonNull long newStartTime) {
 
+        // List<History> candidates = db.historyDao().getCandidatePredictions(newStartTime);
         List<History> candidates = db.historyDao().getCandidatePredictions(newStartTime);
         if (candidates == null) {
             // get all entries if no result for the given new departure time

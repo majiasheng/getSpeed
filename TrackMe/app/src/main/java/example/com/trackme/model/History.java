@@ -120,7 +120,8 @@ public class History {
     public String toString() {
         return "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
                 +  "Destination: (" + destination.latitude + ", " + destination.longitude + ")\n"
-                + " Time start: " + new Date(startTime) + "\n"
-                + " Time end: " + new Date(endTime) + "\n";
+                + "Time start: " + new Date(startTime) + "\n"
+                + "Time end: " + new Date(endTime) + "\n"
+                + "Points in trail: " + trail.size();
     }
 }

@@ -12,6 +12,7 @@ import example.com.trackme.model.History;
 
 @Dao
 public interface HistoryDao {
+    long HR_IN_MS = 86400000L;
     @Query("SELECT * FROM history")
     List<History> getAll();
 
@@ -30,6 +31,12 @@ public interface HistoryDao {
     @Query("DELETE FROM history")
     void deleteAll();
 
-    @Query("SELECT * FROM history WHERE startTime >= :newStartTime-" + TrackMe.T + " AND startTime <= :newStartTime+" + TrackMe.T)
+    //FIXME: query was assuming new lo and hi are time of day...
+//    @Query("SELECT * FROM history WHERE startTime >= (:newStartTime-" + TrackMe.T + ") AND startTime <= (:newStartTime+" + TrackMe.T+")")
+    @Query("SELECT * FROM history WHERE (:newStartTime - startTime)%" + HR_IN_MS + " >= -" + TrackMe.T + " AND (:newStartTime - startTime)%" + HR_IN_MS + "<= " + TrackMe.T)
     List<History> getCandidatePredictions(long newStartTime);
+
+
+//    @Query("SELECT * FROM history WHERE startTime % " + HR_IN_MS + ":lo AND startTime <= :hi")
+//    List<History> getCandidatePredictions(long lo, long hi);
 }

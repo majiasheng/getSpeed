@@ -32,11 +32,17 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import example.com.trackme.model.History;
 import example.com.trackme.model.TrackFinishDialog;
+import example.com.trackme.persistence.LatLngConverter;
+import example.com.trackme.persistence.LatLngListConverter;
 import example.com.trackme.persistence.TrackMeDatabase;
 import example.com.trackme.util.HistoryConverter;
 
@@ -212,12 +218,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             predictedTrail = mMap.addPolyline(new PolylineOptions()
                     .addAll(prediction.getTrail())
                     .width(5)
-                    .color(Color.GRAY));
-//            predictedTrail = mMap.addPolyline(new PolylineOptions()
-//                    .add(origin)
-//                    .width(5)
-//                    .color(Color.GRAY));
-//            predictedTrail.setPoints(prediction.getTrail());
+                    .color(Color.GREEN));
             System.out.println("predictedTrail: " + predictedTrail.getPoints().size());
 
         }
@@ -297,6 +298,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     TrackMeDatabase.class, "trackMe")
                     .allowMainThreadQueries()
                     .build();
+//            DEBUG:
+//            System.out.println("Number of history: " + db.historyDao().getAll().size());
+//            for (History h : db.historyDao().getAll()) {
+//
+//                long st =  h.getStartTime();
+//                String a =((1525899756783L - st)%86400000  >= -TrackMe.T && (1525899756783L - st)%86400000  <= TrackMe.T)?"true":"false";
+//                System.out.println(st + " | " + a);
+//
+//            }
+//
+//            System.out.println("testnow "+db.historyDao().getCandidatePredictions(1525899756783L).size());
+
         }
     }
 
@@ -364,10 +377,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 long currentTime = System.currentTimeMillis();
                                 origin = currentPosition;
                                 currentHistory = new History(null, origin, null, currentTime, -1);
+
+                                // initialize trail
                                 trail = mMap.addPolyline(new PolylineOptions()
                                         .add(origin)
                                         .width(5)
                                         .color(Color.RED));
+
                                 originMarker = markPosition(origin, "Origin", "You started here :)");
 
                                 predict(origin, currentTime);
@@ -377,18 +393,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             // do this only when tracking session ended
                             if (ended) {
                                 destination = currentPosition;
-                                // save to histories
+                                // add values to current history
                                 currentHistory.setDestination(destination);
                                 currentHistory.setEndTime(System.currentTimeMillis());
                                 currentHistory.setTrail(trail.getPoints());
+
                                 // this may not be necessary since the dialog box will cover it
                                 dstMarker = markPosition(destination, "Destination", "");
+
                                 //TODO: get lat long's location name
                                 String message = "Origin: (" + origin.latitude + ", " + origin.longitude + ")\n"
                                         + "Destination: (" + destination.latitude + ", " + destination.longitude + ")";
-
                                 // history will be prompted to save in dialog's handler
-                                showDialog(message, HistoryConverter.historyToString(currentHistory));
+                                String histString = HistoryConverter.historyToString(currentHistory);
+                                // System.out.println("histString: " + histString);
+                                showDialog(message, histString);
+
                                 reset();
                             }
                         } else {
@@ -419,7 +439,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void clearHistory() {
-        db.historyDao().deleteAll();
+        //NOTE: this is disabled to prevent accidental clicks
+        // TODO: enable when dialog box for confirmation is added
+        //db.historyDao().deleteAll();
     }
 
 }

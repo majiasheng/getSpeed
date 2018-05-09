@@ -39,7 +39,8 @@
         android:layout_marginTop="55dp"
         android:background="@color/colorAccent"
         android:text="Clear History"
-        android:textColor="@color/common_google_signin_btn_text_dark_default" />
+        android:textColor="@color/common_google_signin_btn_text_dark_default"
+        android:visibility="invisible" />
     <!--android:text="@string/switch_text"-->
 
 </RelativeLayout>
