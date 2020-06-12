@@ -1,4 +1,4 @@
-# getSpeed
+# TrackMe
 ## Goal:
 To track user itinerary and provide prediction. 
 
