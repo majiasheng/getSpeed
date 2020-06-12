@@ -1,6 +1,0 @@
-<resources>
-    <string name="app_name">GetSpeed</string>
-    <string name="activity">Activity</string>
-    <string name="acceleration">a</string>
-    <string name="speed">v</string>
-</resources>
